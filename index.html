@@ -1,95 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Lua-Obfuscator-by-joyful_pizzapartyl-V19.3.1</title>
-<style>
-body {
-    background:#0b0b0b;
-    color:#0f0;
-    font-family: monospace;
-    padding:20px;
-}
-textarea {
-    width:100%;
-    height:220px;
-    background:#000;
-    color:#0f0;
-    border:1px solid #0f0;
-    padding:10px;
-}
-button {
-    margin-top:10px;
-    padding:10px 20px;
-    background:#000;
-    color:#0f0;
-    border:1px solid #0f0;
-    cursor:pointer;
-}
-button:hover {
-    background:#0f0;
-    color:#000;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Lua Obfuscator by you know who</title>
+  <style>
+    body { background:#0d0d0d;color:#0f0;font-family:monospace }
+    textarea,button { width:100%;margin-top:10px;background:#111;color:#0f0 }
+    button { cursor:pointer }
+  </style>
 </head>
-
 <body>
 
-<h2>Lua Obfuscator (by joyful_pizzapartyl) 9.5.1</h2>
+<h2>Lua joyful_pizzapartyl Obfuscator</h2>
 
-<textarea id="input" placeholder="Paste Lua script here"></textarea>
-<button onclick="obfuscate()">Obfuscate</button>
-<textarea id="output" placeholder="Obfuscated Lua output"></textarea>
+<textarea id="input" rows="10" placeholder="Paste Lua here"></textarea>
+<button onclick="obf()">Obfuscate</button>
+<textarea id="output" rows="14" placeholder="Obfuscated output"></textarea>
 
 <script>
-function obfuscate() {
-    var src = document.getElementById("input").value;
-    if (!src) { alert("Paste Lua code first"); return; }
+function rand(n=8){
+  return Array.from({length:n},()=>String.fromCharCode(97+Math.random()*26|0)).join('')
+}
 
-    var OFFSET = 19;
-    var XOR = 7;
-    var CHUNK = 64;
+function encode(s){
+  return s.split('').map(c=>((c.charCodeAt(0)^91)+17))
+}
 
-    // encode
-    var enc = [];
-    for (var i = 0; i < src.length; i++) {
-        var b = src.charCodeAt(i);
-        b = (b ^ XOR) + OFFSET;
-        enc.push(b);
-    }
+function fakeBlock(){
+  return `
+do
+  local ${rand()} = "${rand(20)}"
+  loadstring("-- ${rand(40)}")()
+end`
+}
 
-    var out = [];
-    function w(s){ out.push(s); }
+function obf(){
+  const lua = document.getElementById("input").value
+  const enc = encode(lua)
 
-    // lua output
-    w("-- obfuscated by joyful_pizzapartyl obfuscator");
-    w("do");
-    w("local _L = loadstring or load");
-    w("local _DATA = {" + enc.join(",") + "}");
-    w("local _OFFSET = " + OFFSET);
-    w("local _XOR = " + XOR);
-    w("local _CHUNK = " + CHUNK);
-    w("local _b = {}");
+  let blocks = []
 
-    w("local function _emit(c)");
-    w("  _b[#_b+1] = string.char(c)");
-    w("  if #_b >= _CHUNK then");
-    w("    _L(table.concat(_b))()");
-    w("    for i=1,#_b do _b[i]=nil end");
-    w("  end");
-    w("end");
+  // 99% fake junk
+  for(let i=0;i<40;i++){
+    blocks.push(fakeBlock())
+  }
 
-    w("for i=1,#_DATA do");
-    w("  local x = _DATA[i]");
-    w("  x = x - _OFFSET");
-    w("  x = x ~ _XOR");
-    w("  _emit(x)");
-    w("end");
+  // fake printable decoder (PRANK)
+  blocks.push(`
+do
+  local t={${enc.slice(0,10).join(',')}}
+  local o=""
+  for i=1,#t do
+    o=o..string.char((t[i]-17)~91)
+  end
+  loadstring(o)() -- WRONG ON PURPOSE
+end
+`)
 
-    w("if #_b > 0 then _L(table.concat(_b))() end");
-    w("end");
+  // real payload (hidden)
+  blocks.push(`
+do
+  local a={${enc.join(',')}}
+  local b={}
+  for i=1,#a do
+    b[i]=string.char((a[i]-17)~91)
+  end
+  ((loadstring or load)(table.concat(b)))()
+end
+`)
 
-    document.getElementById("output").value = out.join("\n");
+  // shuffle blocks
+  blocks.sort(()=>Math.random()-.5)
+
+  document.getElementById("output").value =
+
+
+local loadstring=(function()
+  local l=loadstring or load
+  return function(x)
+    if type(x)~="string" then return function() end end
+    return l(x)
+  end
+end)()
+
+${blocks.join("\n")}
+`
 }
 </script>
 
