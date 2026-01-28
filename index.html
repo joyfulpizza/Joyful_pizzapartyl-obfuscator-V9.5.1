@@ -1,44 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Lua Obfuscator by joyful_pizzapartyl</title>
-<meta charset="UTF-8">
-<style>
-body {
-    background:#0b0b0b;
-    color:#0f0;
-    font-family: monospace;
-    padding:20px;
-}
-textarea {
-    width:100%;
-    height:200px;
-    background:#000;
-    color:#0f0;
-    border:1px solid #0f0;
-    padding:10px;
-}
-button {
-    background:#000;
-    color:#0f0;
-    border:1px solid #0f0;
-    padding:10px 20px;
-    cursor:pointer;
-}
-button:hover { background:#0f0; color:#000; }
-</style>
-</head>
-
-<body>
-
-<h2>Lua Obfuscator (by you know who)</h2>
-
-<textarea id="input" placeholder="Paste Lua script here..."></textarea>
-<br><br>
-<button onclick="obfuscate()">Obfuscate</button>
-<br><br>
-<textarea id="output" placeholder="Obfuscated code appears here"></textarea>
-
 <script>
 function obfuscate() {
     let src = document.getElementById("input").value;
@@ -46,9 +5,8 @@ function obfuscate() {
 
     let OFFSET = 19;
     let XOR = 7;
-    let CHUNK = 24;
+    let CHUNK = 48; // bigger = safer
 
-    // encode bytes
     let enc = [];
     for (let i = 0; i < src.length; i++) {
         let b = src.charCodeAt(i);
@@ -56,48 +14,40 @@ function obfuscate() {
         enc.push(b);
     }
 
-    // build Lua obfuscated script
     let out = [];
-    out.push("do");
-    out.push("local _p=print local _l=loadstring or load");
-    out.push("local function _die() while true do end end");
-    out.push("if _p~=print then _die() end");
+    function w(x){ out.push(x); }
 
-    // junk
-    out.push("local _junk={} for i=1,50 do _junk[i]=function() return math.random() end end");
-    out.push("if math.random()<0 then _junk[1]() end");
+    w("-- Obfuscated by joyful_pizzapartyl obfuscator");
+    w("do");
+    w("local _l = loadstring or load");
 
-    // data
-    out.push("local _d={" + enc.join(",") + "}");
+    
+    w("local _j={} for i=1,20 do _j[i]=math.random() end");
+    w("if math.random()<0 then error('nope') end");
 
-    // decoder (no full string stored)
-    out.push(`
-local _buf={}
-local function _emit(c)
-    _buf[#_buf+1]=string.char(c)
-    if #_buf>${CHUNK} then
-        _l(table.concat(_buf))()
-        table.clear(_buf)
-    end
-end
+    
+    w("local _d={"+enc.join(",")+"}");
 
-for i=1,#_d do
-    local b=_d[i]
-    b=b-${OFFSET}
-    b=b~${XOR}
-    _emit(b)
-end
+    
+    w("local _b={}");
+    w("local function _e(c)");
+    w("  _b[#_b+1]=string.char(c)");
+    w("  if #_b>"+CHUNK+" then");
+    w("    _l(table.concat(_b))()");
+    w("    for i=1,#_b do _b[i]=nil end");
+    w("  end");
+    w("end");
 
-if #_buf>0 then
-    _l(table.concat(_buf))()
-end
-`);
+    w("for i=1,#_d do");
+    w("  local x=_d[i]");
+    w("  x=x-"+OFFSET);
+    w("  x=x~"+XOR);
+    w("  _e(x)");
+    w("end");
 
-    out.push("end");
+    w("if #_b>0 then _l(table.concat(_b))() end");
+    w("end");
 
     document.getElementById("output").value = out.join("\n");
 }
 </script>
-
-</body>
-</html>
